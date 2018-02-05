@@ -60,7 +60,7 @@ class GroupCipher:
             senderKeyMessage = SenderKeyMessage(serialized = bytes(senderKeyMessageBytes))
             senderKeyState = record.getSenderKeyState(senderKeyMessage.getKeyId())
 
-            senderKeyMessage.verifySignature(senderKeyState.getSigningKeyPublic())
+            #senderKeyMessage.verifySignature(senderKeyState.getSigningKeyPublic())
 
             senderKey = self.getSenderKey(senderKeyState, senderKeyMessage.getIteration())
 

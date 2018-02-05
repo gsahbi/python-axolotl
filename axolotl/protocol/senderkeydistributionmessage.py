@@ -7,6 +7,8 @@ from ..legacymessageexception import LegacyMessageException
 from ..invalidmessageexception import InvalidMessageException
 from ..invalidkeyexception import InvalidKeyException
 from ..ecc.curve import Curve
+
+
 class SenderKeyDistributionMessage(CiphertextMessage):
     def __init__(self, id=None, iteration=None, chainKey=None, signatureKey=None, serialized=None):
         """
@@ -16,17 +18,15 @@ class SenderKeyDistributionMessage(CiphertextMessage):
         :type signatureKey: ECPublicKey
         """
 
-
-        assert bool(id is not None and iteration is not None and chainKey is not None and signatureKey is not None)\
-               ^ bool(serialized),\
+        assert bool(id is not None and iteration is not None and chainKey is not None and signatureKey is not None) \
+               ^ bool(serialized), \
             "Either pass arguments or serialized data"
 
         if serialized:
             try:
-                messageParts = ByteUtil.split(serialized, 1, len(serialized)- 1)
+                messageParts = ByteUtil.split(serialized, 1, len(serialized) - 1)
                 version = messageParts[0][0]
                 message = messageParts[1]
-
 
                 if ByteUtil.highBitsToInt(version) < 3:
                     raise LegacyMessageException("Legacy message: %s" % ByteUtil.highBitsToInt(version))
@@ -34,19 +34,18 @@ class SenderKeyDistributionMessage(CiphertextMessage):
                 if ByteUtil.highBitsToInt(version) > self.__class__.CURRENT_VERSION:
                     raise InvalidMessageException("Unknown version: %s" % ByteUtil.highBitsToInt(version))
 
-
                 distributionMessage = whisperprotos.SenderKeyDistributionMessage()
                 distributionMessage.ParseFromString(message)
 
-                if distributionMessage.id is None or distributionMessage.iteration is None\
-                    or distributionMessage.chainKey is None or distributionMessage.signingKey is None:
+                if distributionMessage.id is None or distributionMessage.iteration is None \
+                        or distributionMessage.chainKey is None or distributionMessage.signingKey is None:
                     raise InvalidMessageException("Incomplete message")
 
                 self.serialized = serialized
 
-                self.id           = distributionMessage.id
-                self.iteration    = distributionMessage.iteration
-                self.chainKey     = distributionMessage.chainKey
+                self.id = distributionMessage.id
+                self.iteration = distributionMessage.iteration
+                self.chainKey = distributionMessage.chainKey
                 self.signatureKey = Curve.decodePoint(bytearray(distributionMessage.signingKey), 0)
 
             except Exception as e:
@@ -60,7 +59,7 @@ class SenderKeyDistributionMessage(CiphertextMessage):
             message = whisperprotos.SenderKeyDistributionMessage()
             message.id = id
             message.iteration = iteration
-            message.chainKey= bytes(chainKey)
+            message.chainKey = bytes(chainKey)
             message.signingKey = signatureKey.serialize()
             message = message.SerializeToString()
             self.serialized = bytes(ByteUtil.combine(version, message))
