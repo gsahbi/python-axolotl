@@ -125,5 +125,6 @@ target/
 *.un~
 Session.vim
 .netrwhist
-*~
 
+### IDE
+.idea

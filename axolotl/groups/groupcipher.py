@@ -9,8 +9,11 @@ from ..nosessionexception import NoSessionException
 from ..protocol.senderkeymessage import SenderKeyMessage
 from ..sessioncipher import AESCipher
 from ..groups.state.senderkeystore import SenderKeyStore
+
 if sys.version_info >= (3, 0):
     unicode = str
+
+
 class GroupCipher:
     def __init__(self, senderKeyStore, senderKeyName):
         """
@@ -25,9 +28,9 @@ class GroupCipher:
         :type paddedPlaintext: str
         """
         # TODO: make this less ugly and python 2 and 3 compatible
-        # paddedMessage = bytearray(paddedMessage.encode() if (sys.version_info >= (3, 0) and not type(paddedMessage) in (bytes, bytearray)) or type(paddedMessage) is unicode else paddedMessage)
-        if (sys.version_info >= (3, 0) and
-                not type(paddedPlaintext) in (bytes, bytearray)) or type(paddedPlaintext) is unicode:
+        if (sys.version_info >= (3, 0)
+            and not type(paddedPlaintext) in (bytes, bytearray)) \
+                or type(paddedPlaintext) is unicode:
             paddedPlaintext = bytearray(paddedPlaintext.encode())
         else:
             paddedPlaintext = bytearray(paddedPlaintext)
@@ -57,10 +60,10 @@ class GroupCipher:
             record = self.senderKeyStore.loadSenderKey(self.senderKeyName)
             if record.isEmpty():
                 raise NoSessionException("No sender key for: %s" % self.senderKeyName)
-            senderKeyMessage = SenderKeyMessage(serialized = bytes(senderKeyMessageBytes))
+            senderKeyMessage = SenderKeyMessage(serialized=bytes(senderKeyMessageBytes))
             senderKeyState = record.getSenderKeyState(senderKeyMessage.getKeyId())
 
-            #senderKeyMessage.verifySignature(senderKeyState.getSigningKeyPublic())
+            senderKeyMessage.verifySignature(senderKeyState.getSigningKeyPublic())
 
             senderKey = self.getSenderKey(senderKeyState, senderKeyMessage.getIteration())
 
@@ -104,7 +107,7 @@ class GroupCipher:
             if sys.version_info >= (3, 0):
                 try:
                     return plaintext.decode()
-                except UnicodeDecodeError as e:
+                except UnicodeDecodeError:
                     return plaintext
             return plaintext
         except Exception as e:
