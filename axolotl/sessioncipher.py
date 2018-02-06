@@ -87,11 +87,14 @@ class SessionCipher:
 
         return plaintext
 
-    def decryptPkmsg(self, ciphertext, textMsg=True):
+    def decryptPkmsg(self, ciphertext):
         """
         :type ciphertext: PreKeyWhisperMessage
         """
         sessionRecord = self.sessionStore.loadSession(self.recipientId, self.deviceId)
+        if sessionRecord.isFresh():
+            raise NoSessionException
+        
         unsignedPreKeyId = self.sessionBuilder.process(sessionRecord, ciphertext)
         plaintext = self.decryptWithSessionRecord(sessionRecord, ciphertext.getWhisperMessage())
 

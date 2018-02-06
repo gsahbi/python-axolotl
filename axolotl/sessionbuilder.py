@@ -16,7 +16,6 @@ from .statekeyexchangeexception import StaleKeyExchangeException
 from .util.medium import Medium
 from .util.keyhelper import KeyHelper
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -36,20 +35,14 @@ class SessionBuilder:
         :type message: PreKeyWhisperMessage
         """
 
-        messageVersion = message.getMessageVersion()
         theirIdentityKey = message.getIdentityKey()
 
-        unsignedPreKeyId = None
+        # unsignedPreKeyId = None
 
         if not self.identityKeyStore.isTrustedIdentity(self.recipientId, theirIdentityKey):
             raise UntrustedIdentityException(self.recipientId, theirIdentityKey)
 
-        if messageVersion == 2:
-            unsignedPreKeyId = self.processV2(sessionRecord, message)
-        elif messageVersion == 3:
-            unsignedPreKeyId = self.processV3(sessionRecord, message)
-        else:
-            raise AssertionError("Unkown version %s" % messageVersion)
+        unsignedPreKeyId = self.processV3(sessionRecord, message)
 
         self.identityKeyStore.saveIdentity(self.recipientId, theirIdentityKey)
 
@@ -66,19 +59,19 @@ class SessionBuilder:
 
         if not self.preKeyStore.containsPreKey(message.getPreKeyId()) and \
                 self.sessionStore.containsSession(self.recipientId, self.deviceId):
-            logging.warn("We've already processed the prekey part of this V2 session, "
-                         "letting bundled message fall through...")
+            logging.warning("We've already processed the prekey part of this V2 session, "
+                            "letting bundled message fall through...")
             return None
 
         ourPreKey = self.preKeyStore.loadPreKey(message.getPreKeyId()).getKeyPair()
 
         parameters = BobAxolotlParameters.newBuilder()
 
-        parameters.setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair())\
-            .setOurSignedPreKey(ourPreKey)\
-            .setOurRatchetKey(ourPreKey)\
-            .setOurOneTimePreKey(None)\
-            .setTheirIdentityKey(message.getIdentityKey())\
+        parameters.setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair()) \
+            .setOurSignedPreKey(ourPreKey) \
+            .setOurRatchetKey(ourPreKey) \
+            .setOurOneTimePreKey(None) \
+            .setTheirIdentityKey(message.getIdentityKey()) \
             .setTheirBaseKey(message.getBaseKey())
 
         if not sessionRecord.isFresh():
@@ -106,15 +99,15 @@ class SessionBuilder:
         """
 
         if sessionRecord.hasSessionState(message.getMessageVersion(), message.getBaseKey().serialize()):
-            logger.warn("We've already setup a session for this V3 message, letting bundled message fall through...")
+            logger.warning("We've already setup a session for this V3 message, letting bundled message fall through...")
             return None
 
         ourSignedPreKey = self.signedPreKeyStore.loadSignedPreKey(message.getSignedPreKeyId()).getKeyPair()
         parameters = BobAxolotlParameters.newBuilder()
-        parameters.setTheirBaseKey(message.getBaseKey())\
-            .setTheirIdentityKey(message.getIdentityKey())\
-            .setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair())\
-            .setOurSignedPreKey(ourSignedPreKey)\
+        parameters.setTheirBaseKey(message.getBaseKey()) \
+            .setTheirIdentityKey(message.getIdentityKey()) \
+            .setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair()) \
+            .setOurSignedPreKey(ourSignedPreKey) \
             .setOurRatchetKey(ourSignedPreKey)
 
         if message.getPreKeyId() is not None:
@@ -144,10 +137,10 @@ class SessionBuilder:
         if not self.identityKeyStore.isTrustedIdentity(self.recipientId, preKey.getIdentityKey()):
             raise UntrustedIdentityException(self.recipientId, preKey.getIdentityKey())
 
-        if preKey.getSignedPreKey() is not None and\
-            not Curve.verifySignature(preKey.getIdentityKey().getPublicKey(),
-                                      preKey.getSignedPreKey().serialize(),
-                                      preKey.getSignedPreKeySignature()):
+        if preKey.getSignedPreKey() is not None and \
+                not Curve.verifySignature(preKey.getIdentityKey().getPublicKey(),
+                                          preKey.getSignedPreKey().serialize(),
+                                          preKey.getSignedPreKeySignature()):
             raise InvalidKeyException("Invalid signature on device key!")
 
         if preKey.getSignedPreKey() is None and preKey.getPreKey() is None:
@@ -162,11 +155,11 @@ class SessionBuilder:
 
         parameters = AliceAxolotlParameters.newBuilder()
 
-        parameters.setOurBaseKey(ourBaseKey)\
-            .setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair())\
-            .setTheirIdentityKey(preKey.getIdentityKey())\
-            .setTheirSignedPreKey(theirSignedPreKey)\
-            .setTheirRatchetKey(theirSignedPreKey)\
+        parameters.setOurBaseKey(ourBaseKey) \
+            .setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair()) \
+            .setTheirIdentityKey(preKey.getIdentityKey()) \
+            .setTheirSignedPreKey(theirSignedPreKey) \
+            .setTheirRatchetKey(theirSignedPreKey) \
             .setTheirOneTimePreKey(theirOneTimePreKey if supportsV3 else None)
 
         if not sessionRecord.isFresh():
@@ -211,17 +204,17 @@ class SessionBuilder:
 
         builder = SymmetricAxolotlParameters.newBuilder()
         if not sessionRecord.getSessionState().hasPendingKeyExchange():
-            builder.setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair())\
-                .setOurBaseKey(Curve.generateKeyPair())\
+            builder.setOurIdentityKey(self.identityKeyStore.getIdentityKeyPair()) \
+                .setOurBaseKey(Curve.generateKeyPair()) \
                 .setOurRatchetKey(Curve.generateKeyPair())
         else:
-            builder.setOurIdentityKey(sessionRecord.getSessionState().getPendingKeyExchangeIdentityKey())\
-                .setOurBaseKey(sessionRecord.getSessionState().getPendingKeyExchangeBaseKey())\
+            builder.setOurIdentityKey(sessionRecord.getSessionState().getPendingKeyExchangeIdentityKey()) \
+                .setOurBaseKey(sessionRecord.getSessionState().getPendingKeyExchangeBaseKey()) \
                 .setOurRatchetKey(sessionRecord.getSessionState().getPendingKeyExchangeRatchetKey())
             flags |= KeyExchangeMessage.SIMULTAENOUS_INITIATE_FLAG
 
-        builder.setTheirBaseKey(keyExchangeMessage.getBaseKey())\
-            .setTheirRatchetKey(keyExchangeMessage.getRatchetKey())\
+        builder.setTheirBaseKey(keyExchangeMessage.getBaseKey()) \
+            .setTheirRatchetKey(keyExchangeMessage.getRatchetKey()) \
             .setTheirIdentityKey(keyExchangeMessage.getIdentityKey())
 
         parameters = builder.create()
@@ -253,8 +246,8 @@ class SessionBuilder:
 
         if not hasPendingKeyExchange \
                 or sessionState.getPendingKeyExchangeSequence() != keyExchangeMessage.getSequence():
-            logger.warn("No matching sequence for response. "
-                        "Is simultaneous initiate response: %s" % isSimultaneousInitiateResponse)
+            logger.warning("No matching sequence for response. "
+                           "Is simultaneous initiate response: %s" % isSimultaneousInitiateResponse)
             if not isSimultaneousInitiateResponse:
                 raise StaleKeyExchangeException()
             else:
@@ -262,11 +255,11 @@ class SessionBuilder:
 
         parameters = SymmetricAxolotlParameters.newBuilder()
 
-        parameters.setOurBaseKey(sessionRecord.getSessionState().getPendingKeyExchangeBaseKey())\
-            .setOurRatchetKey(sessionRecord.getSessionState().getPendingKeyExchangeRatchetKey())\
-            .setOurIdentityKey(sessionRecord.getSessionState().getPendingKeyExchangeIdentityKey())\
-            .setTheirBaseKey(keyExchangeMessage.getBaseKey())\
-            .setTheirRatchetKey(keyExchangeMessage.getRatchetKey())\
+        parameters.setOurBaseKey(sessionRecord.getSessionState().getPendingKeyExchangeBaseKey()) \
+            .setOurRatchetKey(sessionRecord.getSessionState().getPendingKeyExchangeRatchetKey()) \
+            .setOurIdentityKey(sessionRecord.getSessionState().getPendingKeyExchangeIdentityKey()) \
+            .setTheirBaseKey(keyExchangeMessage.getBaseKey()) \
+            .setTheirRatchetKey(keyExchangeMessage.getRatchetKey()) \
             .setTheirIdentityKey(keyExchangeMessage.getIdentityKey())
 
         if not sessionRecord.isFresh():
